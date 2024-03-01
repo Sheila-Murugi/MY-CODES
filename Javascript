@@ -1,0 +1,837 @@
+// SELECTING THE REGION OF INTEREST (Greece)
+
+var Greece = admin2.filter(ee.Filter.eq('ADM0_NAME', 'Greece'))
+
+Map.centerObject(Greece,5)
+var visParams = {'color': 'red'}
+Map.addLayer(Greece, {}, "Greece")
+
+// MODULE 2 (Mapping Water Surface)
+// CALLING THE DATASETS
+var hydrobasins = ee.FeatureCollection("WWF/HydroSHEDS/v1/Basins/hybas_7");
+var basin = hydrobasins.filter(ee.Filter.eq('HYBAS_ID', 7070070800))
+var geometry = basin.geometry()
+Map.centerObject(geometry, 10)
+print(basin)
+var gswYearly = ee.ImageCollection("JRC/GSW1_4/YearlyHistory");
+
+
+// WJR 2018
+// Filter using the 'year' property
+var filtered_18 = gswYearly.filter(ee.Filter.eq('year', 2018))
+var gsw2018 = ee.Image(filtered_18.first())
+// Select permanent or seasonal water
+var water2018 = gsw2018.eq(2).or(gsw2018.eq(3))
+var Water2018PARAGUAY = water2018.clip(geometry)
+// Mask '0' value pixels
+var Water2018PARAGUAY = Water2018PARAGUAY.selfMask()
+var visParams = {
+  min:0,
+  max:1,
+  palette: ['white','blue']
+}
+ Map.addLayer(Water2018PARAGUAY, visParams, '2018 Water')
+// MORPHO
+var waterProcessed2018 = Water2018PARAGUAY
+  .focalMax({
+    'radius':30,
+    'units': 'meters',
+    'kernelType': 'square'})
+  .focalMin({
+    'radius':30,
+    'units': 'meters',
+    'kernelType': 'square'});
+Map.addLayer(waterProcessed2018, visParams, 'Surface Water 2018 (Processed)')
+
+
+
+// WJR 2020
+var filtered_20 = gswYearly.filter(ee.Filter.eq('year', 2020))
+var gsw2020 = ee.Image(filtered_20.first())
+// Select permanent or seasonal water
+var water2020 = gsw2020.eq(2).or(gsw2020.eq(3))
+var Water2020PARAGUAY = water2020.clip(geometry)
+// Mask '0' value pixels
+var Water2018PARAGUAY = Water2020PARAGUAY.selfMask()
+var visParams = {
+  min:0,
+  max:1,
+  palette: ['white','blue']
+}
+ Map.addLayer(Water2020PARAGUAY, visParams, '2020 Water')
+// MORPHO
+var waterProcessed2020 = Water2020PARAGUAY
+  .focalMax({
+    'radius':30,
+    'units': 'meters',
+    'kernelType': 'square'})
+  .focalMin({
+    'radius':30,
+    'units': 'meters',
+    'kernelType': 'square'});
+ Map.addLayer(waterProcessed2020, visParams, 'Surface Water 2020 (Processed)')
+
+
+// WJR 2021
+var filtered_21 = gswYearly.filter(ee.Filter.eq('year', 2021))
+var gsw2021 = ee.Image(filtered_21.first())
+// Select permanent or seasonal water
+var water2021 = gsw2021.eq(2).or(gsw2021.eq(3))
+var Water2021PARAGUAY = water2021.clip(geometry)
+// Mask '0' value pixels
+var Water2018PARAGUAY = Water2018PARAGUAY.selfMask()
+var visParams = {
+  min:0,
+  max:1,
+  palette: ['white','blue']
+}
+ Map.addLayer(Water2021PARAGUAY, visParams, '2021 Water')
+// MORPHO
+var waterProcessed2021 = Water2021PARAGUAY
+  .focalMax({
+    'radius':30,
+    'units': 'meters',
+    'kernelType': 'square'})
+  .focalMin({
+    'radius':30,
+    'units': 'meters',
+    'kernelType': 'square'});
+    Map.addLayer(waterProcessed2021, visParams, 'Surface Water 2021 (Processed)')
+
+
+
+// EXPORTING THE IMAGES
+Export.image.toDrive({
+  image:Water2018PARAGUAY,
+  description:"SurfaceWater2018BeforeMorph",
+  folder: "RemoteSensingPARAGUAY",
+  scale:30,
+  region:geometry,
+  maxPixels: 1e13
+});
+Export.image.toDrive({
+  image:waterProcessed2018,
+  description:"SurfaceWater2018AfterMorph",
+  folder: "RemoteSensingPARAGUAY",
+  scale:30,
+  region:geometry,
+  maxPixels: 1e13
+});
+
+
+
+Export.image.toDrive({
+  image:Water2020PARAGUAY,
+  description:"SurfaceWater2020BeforeMorph",
+  folder: "RemoteSensingPARAGUAY",
+  scale:30,
+  region:geometry,
+  maxPixels: 1e13
+});
+Export.image.toDrive({
+  image:waterProcessed2020,
+  description:"SurfaceWater2020AfterMorph",
+  folder: "RemoteSensingPARAGUAY",
+  scale:30,
+  region:geometry,
+  maxPixels: 1e13
+});
+
+
+
+Export.image.toDrive({
+  image:Water2021PARAGUAY,
+  description:"SurfaceWater2021BeforeMorph",
+  folder: "RemoteSensingPARAGUAY",
+  scale:30,
+  region:geometry,
+  maxPixels: 1e13
+});
+Export.image.toDrive({
+  image:waterProcessed2021,
+  description:"SurfaceWater2021AfterMorph",
+  folder: "RemoteSensingPARAGUAY",
+  scale:30,
+  region:geometry,
+  maxPixels: 1e13
+});
+
+
+
+// MODULE 3 (PRECIPITATION TIME SERIES)
+// ROI
+var roi = Greece;
+Map.addLayer(roi, visParams, "Paraguay")
+
+
+// Calculating Total Rainfall
+var chirps = ee.ImageCollection("UCSB-CHG/CHIRPS/PENTAD")
+var startDate = ee.Date.fromYMD(2018, 1,1)
+var endDate = startDate.advance(1, 'year')
+var filtered = chirps
+  .filter(ee.Filter.date(startDate, endDate))
+
+// // Calculate yearly rainfall
+var total = filtered.reduce(ee.Reducer.sum())
+
+var palette = ['#ffffcc','#a1dab4','#41b6c4','#2c7fb8','#253494']
+var visParams = {
+  min:0,
+  max: 2000,
+  palette: palette
+ }
+
+ Map.addLayer(total, visParams, 'Total Precipitation')
+// // Calculate average rainfall across a region
+var stats = total.reduceRegion({
+reducer: ee.Reducer.mean(),
+geometry: roi,
+scale: 5000,
+})
+print(stats)
+print('Average rainfall across ROI :', stats.get('precipitation_sum'))
+
+
+
+var year = 2022
+var startDate = ee.Date.fromYMD(year, 1, 1)
+var endDate = startDate.advance(1, 'year')
+var yearFiltered = chirps
+  .filter(ee.Filter.date(startDate, endDate));
+ //CHIRPS collection has 1 image for every pentad (5-days);
+// The collection is filtered for 1 year and the time-series
+// now has 72 images
+print(yearFiltered);
+
+// We need to aggregate this time series to compute
+// monthly images
+
+// Create a list of months
+var months = ee.List.sequence(1, 12)
+
+// Write a function that takes a month number
+// and returns a monthly image
+var createMonthlyImage = function(month) {
+  var startDate = ee.Date.fromYMD(year, month, 1)
+  var endDate = startDate.advance(1, 'month')
+  var monthFiltered = yearFiltered
+    .filter(ee.Filter.date(startDate, endDate))
+  // Calculate total precipitation
+  var total = monthFiltered.reduce(ee.Reducer.sum())
+  return total.set({
+    'system:time_start': startDate.millis(),
+    'system:time_end': endDate.millis(),
+    'year': year,
+    'month': month})
+}
+
+// map() the function on the list  of months
+// This creates a list with images for each month in the list
+var monthlyImages = months.map(createMonthlyImage)
+// Create an imagecollection
+var monthlyCollection = ee.ImageCollection.fromImages(monthlyImages)
+print(monthlyCollection)
+
+// Create a chart of monthly rainfall for a location
+var chart = ui.Chart.image.series({
+  imageCollection: monthlyCollection,
+  region: roi,
+  reducer: ee.Reducer.mean(),
+  scale: 5566
+}).setOptions({
+      lineWidth: 1,
+      pointSize: 3,
+      title: 'Monthly Rainfall at Greece',
+      vAxis: {title: 'Rainfall (mm)'},
+      hAxis: {title: 'Month', gridlines: {count: 12}}
+})
+print(chart)
+
+
+// ZONAL STATISTICS
+var year18 = 2018
+var startDate18 = ee.Date.fromYMD(year18, 1, 1)
+var endDate18 = startDate18.advance(1, 'year')
+var filtered18 = chirps
+  .filter(ee.Filter.date(startDate18, endDate18))
+// Calculate the total rainfall for the year
+var total18 = filtered18.reduce(ee.Reducer.sum())
+// Display the total rainfall image.
+var palette = ['#ffffcc','#a1dab4','#41b6c4','#2c7fb8','#253494']
+var visParams = {
+  min:0,
+  max: 2000,
+  palette: palette
+}
+Map.addLayer(total18, visParams, 'Total Precipitation')
+// Compute the average total rainfall for each feature
+// reduceRegions() function allows you to do zonal stats
+var withRainfall18 = total18.reduceRegions({
+  collection: Greece,
+  reducer: ee.Reducer.mean(),
+  scale: 5566})
+Map.addLayer(withRainfall18, {color: 'red'}, 'Paraguay')
+var exportCol18 = withRainfall18.select(['ADM2_NAME', 'mean'], ['Haiti', 'average_rainfall'])
+print(exportCol18)
+
+
+
+
+var year20 = 2020
+var startDate20 = ee.Date.fromYMD(year20, 1, 1)
+var endDate20 = startDate20.advance(1, 'year')
+var filtered20 = chirps
+  .filter(ee.Filter.date(startDate20, endDate20))
+// Calculate the total rainfall for the year
+var total20 = filtered20.reduce(ee.Reducer.sum())
+// Display the total rainfall image.
+var palette = ['#ffffcc','#a1dab4','#41b6c4','#2c7fb8','#253494']
+var visParams = {
+  min:0,
+  max: 2000,
+  palette: palette
+}
+Map.addLayer(total20, visParams, 'Total Precipitation')
+// Compute the average total rainfall for each feature
+// reduceRegions() function allows you to do zonal stats
+var withRainfall20 = total20.reduceRegions({
+  collection: Greece,
+  reducer: ee.Reducer.mean(),
+  scale: 5566})
+Map.addLayer(withRainfall20, {color: 'red'}, 'Paraguay')
+var exportCol20 = withRainfall20.select(['ADM2_NAME', 'mean'], ['Paraguay', 'average_rainfall'])
+print(exportCol20)
+
+
+
+
+var year21 = 2021
+var startDate21 = ee.Date.fromYMD(year21, 1, 1)
+var endDate21 = startDate21.advance(1, 'year')
+var filtered21 = chirps
+  .filter(ee.Filter.date(startDate21, endDate21))
+// Calculate the total rainfall for the year
+var total21 = filtered21.reduce(ee.Reducer.sum())
+// Display the total rainfall image.
+var palette = ['#ffffcc','#a1dab4','#41b6c4','#2c7fb8','#253494']
+var visParams = {
+  min:0,
+  max: 2000,
+  palette: palette
+}
+Map.addLayer(total21, visParams, 'Total Precipitation')
+// Compute the average total rainfall for each feature
+// reduceRegions() function allows you to do zonal stats
+var withRainfall21 = total21.reduceRegions({
+  collection: Greece,
+  reducer: ee.Reducer.mean(),
+  scale: 5566})
+Map.addLayer(withRainfall21, {color: 'red'}, 'Paraguay')
+var exportCol21 = withRainfall21.select(['ADM2_NAME', 'mean'], ['Paraguay', 'average_rainfall'])
+print(exportCol21)
+
+
+// DOWNLOADING THE ZONAL STATISCTICS
+Export.table.toDrive({
+  collection: exportCol18,
+  description:'ZonalStatics2018',
+  folder: "RemoteSensingHAITI",
+  fileFormat: 'CSV'
+});
+Export.table.toDrive({
+  collection: exportCol20,
+  description:'ZonalStatics2020',
+  folder: "RemoteSensingHAITI",
+  fileFormat: 'CSV'
+});
+Export.table.toDrive({
+  collection: exportCol21,
+  description:'ZonalStatics2021',
+  folder: "RemoteSensingHAITI",
+  fileFormat: 'CSV'
+});
+
+
+
+// TREND ANALYSIS
+// We will compute the trend of total seasonal rainfall
+// Rainy season is June - September
+var createSeasonalImage = function(year) {
+  var startDate = ee.Date.fromYMD(year, 6, 1)
+  var endDate = ee.Date.fromYMD(year, 10, 1)
+  var seasonFiltered = chirps
+    .filter(ee.Filter.date(startDate, endDate));
+  // Calculate total precipitation
+  var total = seasonFiltered.reduce(ee.Reducer.sum());
+  return total.set({
+    'system:time_start': startDate.millis(),
+    'system:time_end': endDate.millis(),
+    'year': year,
+  });
+};
+
+
+
+// TREND 2018
+// Aggregate Precipitation Data to Yearly Time-Series
+var years18 = ee.List.sequence(2017, 2018);
+var yearlyImages18 = years18.map(createSeasonalImage);
+print(yearlyImages18);
+var yearlyCol18 = ee.ImageCollection.fromImages(yearlyImages18);
+var processImage18 = function(image) {
+  var year = image.get('year');
+  var yearImage = ee.Image.constant(ee.Number(year)).toShort();
+  return ee.Image.cat(yearImage, image).rename(['year', 'prcp']).set('year', year);
+};
+var processedCol18 = yearlyCol18.map(processImage18);
+print(processedCol18);
+// Calculate time series slope using sensSlope().
+var sens18 = processedCol18.reduce(ee.Reducer.sensSlope());
+var slope18 = sens18.select('slope');
+var slope18 = slope18.clip(Greece);
+// Set visualisation parameters
+var visParams = {min: -10, max: 10, palette: ['brown', 'white', 'blue']};
+Map.addLayer(slope18, visParams, 'Trend 2018');
+
+
+
+
+
+// TREND 2020
+// Aggregate Precipitation Data to Yearly Time-Series
+var years20 = ee.List.sequence(2019, 2020);
+var yearlyImages20 = years20.map(createSeasonalImage);
+print(yearlyImages20);
+var yearlyCol20 = ee.ImageCollection.fromImages(yearlyImages20);
+var processImage20 = function(image) {
+ var year = image.get('year');
+ var yearImage = ee.Image.constant(ee.Number(year)).toShort();
+ return ee.Image.cat(yearImage, image).rename(['year', 'prcp']).set('year', year);
+}
+var processedCol20 = yearlyCol20.map(processImage20)
+print(processedCol20)
+// Calculate time series slope using sensSlope().
+var sens20 = processedCol20.reduce(ee.Reducer.sensSlope());
+var slope20 = sens20.select('slope')
+var slope20 = slope20.clip(Greece)
+// Set visualisation parameters
+var visParams = {min: -10, max: 10, palette: ['brown', 'white', 'blue']};
+Map.addLayer(slope20, visParams, 'Trend 2020');
+
+
+
+// TREND 2021
+// Aggregate Precipitation Data to Yearly Time-Series
+var years21 = ee.List.sequence(2021, 2022)
+var yearlyImages21 = years21.map(createSeasonalImage)
+print(yearlyImages21)
+var yearlyCol21 = ee.ImageCollection.fromImages(yearlyImages21)
+var processImage21 = function(image) {
+  var year = image.get('year');
+  var yearImage = ee.Image.constant(ee.Number(year)).toShort();
+  return ee.Image.cat(yearImage, image).rename(['year', 'prcp']).set('year', year);
+}
+var processedCol21 = yearlyCol21.map(processImage21)
+print(processedCol21)
+// Calculate time series slope using sensSlope().
+var sens21 = processedCol21.reduce(ee.Reducer.sensSlope());
+var slope21 = sens21.select('slope')
+var slope21 = slope21.clip(Greece)
+// Set visualisation parameters
+var visParams = {min: -10, max: 10, palette: ['brown', 'white', 'blue']};
+Map.addLayer(slope21, visParams, 'Trend 2021');
+
+
+Export.image.toDrive({
+  image:slope18,
+  description:"Trend18",
+  folder: "RemoteSensingPARAGUAY",
+  scale:30,
+  region:geometry,
+  maxPixels: 1e13
+});
+Export.image.toDrive({
+  image:slope20,
+  description:"Trend20",
+  folder: "RemoteSensingPARAGUAY",
+  scale:30,
+  region:geometry,
+  maxPixels: 1e13
+});
+Export.image.toDrive({
+  image:slope21,
+  description:"Trend21",
+  folder: "RemoteSensingPARAGUAY",
+  scale:30,
+  region:geometry,
+  maxPixels: 1e13
+});
+
+
+
+
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// MODULE 5 (FLOOD MAPPING)
+var admin2 = ee.FeatureCollection('FAO/GAUL_SIMPLIFIED_500m/2015/level2')
+var hydrosheds = ee.Image('WWF/HydroSHEDS/03VFDEM')
+var gsw = ee.Image('JRC/GSW1_3/GlobalSurfaceWater')
+
+var beforeStart = '2018-07-15'
+var beforeEnd = '2018-08-10'
+var afterStart = '2018-08-10'
+var afterEnd = '2018-08-23'
+
+var Haiti = admin2.filter(ee.Filter.eq('ADM1_NAME', 'Artibonite'))
+var geometry = Haiti.geometry()
+Map.addLayer(geometry, {color: 'grey'}, 'Paraguay')
+
+var collection= ee.ImageCollection('COPERNICUS/S1_GRD')
+ .filter(ee.Filter.eq('instrumentMode','IW'))
+ .filter(ee.Filter.listContains('transmitterReceiverPolarisation', 'VH'))
+ .filter(ee.Filter.eq('orbitProperties_pass', 'DESCENDING')) 
+ .filter(ee.Filter.eq('resolution_meters',10))
+ .filter(ee.Filter.bounds(geometry))
+ .select('VH');
+
+var beforeCollection = collection
+ .filter(ee.Filter.date(beforeStart, beforeEnd))
+
+var afterCollection = collection
+ .filter(ee.Filter.date(afterStart, afterEnd))
+  
+var before = beforeCollection.mosaic().clip(geometry);
+var after = afterCollection.mosaic().clip(geometry);
+
+var beforeFiltered = ee.Image(toDB(RefinedLee(toNatural(before))))
+var afterFiltered = ee.Image(toDB(RefinedLee(toNatural(after))))
+
+var difference = afterFiltered.divide(beforeFiltered);
+
+// // Define a threshold
+var diffThreshold = 1.25;
+// // Initial estimate of flooded pixels
+var flooded = difference.gt(diffThreshold).rename('water').selfMask();
+
+Map.centerObject(geometry, 10)
+Map.addLayer(before, {min:-25,max:0}, 'Before Floods', false);
+Map.addLayer(after, {min:-25,max:0}, 'After Floods', false); 
+Map.addLayer(beforeFiltered, {min:-25,max:0}, 'Before Filtered', false);
+Map.addLayer(afterFiltered, {min:-25,max:0}, 'After Filtered', false); 
+Map.addLayer(flooded, {min:0, max:1, palette: ['orange']}, 'Initial Flood Area', false);
+
+// // Mask out area with permanent/semi-permanent water
+var permanentWater = gsw.select('seasonality').gte(5).clip(geometry)
+var permanentWaterMask = permanentWater.unmask(0).not()
+var flooded = flooded.updateMask(permanentWaterMask)
+
+// // Mask out areas with more than 5 percent slope using the HydroSHEDS DEM
+var slopeThreshold = 5;
+var terrain = ee.Algorithms.Terrain(hydrosheds);
+var slope = terrain.select('slope');
+var steepAreas = slope.gt(slopeThreshold)
+var slopeMask = steepAreas.not()
+var flooded = flooded.updateMask(slopeMask)
+
+// // Remove isolated pixels
+// // connectedPixelCount is Zoom dependent, so visual result will vary
+var connectedPixelThreshold = 8;
+var connections = flooded.connectedPixelCount(25)
+var disconnectedAreas = connections.lt(connectedPixelThreshold)
+var disconnectedAreasMask = disconnectedAreas.not()
+var flooded = flooded.updateMask(disconnectedAreasMask)
+
+Map.addLayer(flooded, {min:0, max:1, palette: ['red']}, 'Flooded Areas');
+
+// // Calculate Affected Area
+print('Total District Area (Ha)', geometry.area().divide(10000))
+
+var stats = flooded.multiply(ee.Image.pixelArea()).reduceRegion({
+reducer: ee.Reducer.sum(),
+ geometry: geometry,
+ scale: 10,
+ maxPixels: 1e10,
+ tileScale: 16
+ })
+print('Flooded Area (Ha)', ee.Number(stats.get('water')).divide(10000))
+
+// //############################
+// // Speckle Filtering Functions
+// //############################
+
+// // Function to convert from dB
+function toNatural(img) {
+return ee.Image(10.0).pow(img.select(0).divide(10.0));
+}
+
+// //Function to convert to dB
+function toDB(img) {
+return ee.Image(img).log10().multiply(10.0);
+}
+
+// //Apllying a Refined Lee Speckle filter as coded in the SNAP 3.0 S1TBX:
+
+// //https://github.com/senbox-org/s1tbx/blob/master/s1tbx-op-sar-processing/src/main/java/org/esa/s1tbx/sar/gpf/filtering/SpeckleFilters/RefinedLee.java
+// //Adapted by Guido Lemoine
+
+// // by Guido Lemoine
+function RefinedLee(img) {
+//   // img must be in natural units, i.e. not in dB!
+//   // Set up 3x3 kernels 
+ var weights3 = ee.List.repeat(ee.List.repeat(1,3),3);
+ var kernel3 = ee.Kernel.fixed(3,3, weights3, 1, 1, false);
+
+ var mean3 = img.reduceNeighborhood(ee.Reducer.mean(), kernel3);
+ var variance3 = img.reduceNeighborhood(ee.Reducer.variance(), kernel3);
+
+//   // Use a sample of the 3x3 windows inside a 7x7 windows to determine gradients and directions
+var sample_weights = ee.List([[0,0,0,0,0,0,0], [0,1,0,1,0,1,0],[0,0,0,0,0,0,0], [0,1,0,1,0,1,0], [0,0,0,0,0,0,0], [0,1,0,1,0,1,0],[0,0,0,0,0,0,0]]);
+
+var sample_kernel = ee.Kernel.fixed(7,7, sample_weights, 3,3, false);
+
+//   // Calculate mean and variance for the sampled windows and store as 9 bands
+var sample_mean = mean3.neighborhoodToBands(sample_kernel); 
+var sample_var = variance3.neighborhoodToBands(sample_kernel);
+
+//   // Determine the 4 gradients for the sampled windows
+var gradients = sample_mean.select(1).subtract(sample_mean.select(7)).abs();
+gradients = gradients.addBands(sample_mean.select(6).subtract(sample_mean.select(2)).abs());
+gradients = gradients.addBands(sample_mean.select(3).subtract(sample_mean.select(5)).abs());
+gradients = gradients.addBands(sample_mean.select(0).subtract(sample_mean.select(8)).abs());
+
+//   // And find the maximum gradient amongst gradient bands
+var max_gradient = gradients.reduce(ee.Reducer.max());
+
+//   // Create a mask for band pixels that are the maximum gradient
+var gradmask = gradients.eq(max_gradient);
+
+//   // duplicate gradmask bands: each gradient represents 2 directions
+gradmask = gradmask.addBands(gradmask);
+
+//   // Determine the 8 directions
+var directions = sample_mean.select(1).subtract(sample_mean.select(4)).gt(sample_mean.select(4).subtract(sample_mean.select(7))).multiply(1);
+directions = directions.addBands(sample_mean.select(6).subtract(sample_mean.select(4)).gt(sample_mean.select(4).subtract(sample_mean.select(2))).multiply(2));
+directions = directions.addBands(sample_mean.select(3).subtract(sample_mean.select(4)).gt(sample_mean.select(4).subtract(sample_mean.select(5))).multiply(3));
+directions = directions.addBands(sample_mean.select(0).subtract(sample_mean.select(4)).gt(sample_mean.select(4).subtract(sample_mean.select(8))).multiply(4));
+//   // The next 4 are the not() of the previous 4
+directions = directions.addBands(directions.select(0).not().multiply(5));
+directions = directions.addBands(directions.select(1).not().multiply(6));
+directions = directions.addBands(directions.select(2).not().multiply(7));
+directions = directions.addBands(directions.select(3).not().multiply(8));
+
+//   // Mask all values that are not 1-8
+directions = directions.updateMask(gradmask);
+
+//   // "collapse" the stack into a singe band image (due to masking, each pixel has just one value (1-8) in it's directional band, and is otherwise masked)
+directions = directions.reduce(ee.Reducer.sum());  
+
+var pal = ['ffffff','ff0000','ffff00', '00ff00', '00ffff', '0000ff', 'ff00ff', '000000'];
+Map.addLayer(directions.reduce(ee.Reducer.sum()), {min:1, max:8, palette: pal}, 'Directions', false);
+
+var sample_stats = sample_var.divide(sample_mean.multiply(sample_mean));
+
+//   // Calculate localNoiseVariance
+var sigmaV = sample_stats.toArray().arraySort().arraySlice(0,0,5).arrayReduce(ee.Reducer.mean(), [0]);
+
+//   // Set up the 7*7 kernels for directional statistics
+var rect_weights = ee.List.repeat(ee.List.repeat(0,7),3).cat(ee.List.repeat(ee.List.repeat(1,7),4));
+
+var diag_weights = ee.List([[1,0,0,0,0,0,0], [1,1,0,0,0,0,0], [1,1,1,0,0,0,0], 
+  [1,1,1,1,0,0,0], [1,1,1,1,1,0,0], [1,1,1,1,1,1,0], [1,1,1,1,1,1,1]]);
+
+var rect_kernel = ee.Kernel.fixed(7,7, rect_weights, 3, 3, false);
+var diag_kernel = ee.Kernel.fixed(7,7, diag_weights, 3, 3, false);
+
+//   // Create stacks for mean and variance using the original kernels. Mask with relevant direction.
+var dir_mean = img.reduceNeighborhood(ee.Reducer.mean(), rect_kernel).updateMask(directions.eq(1));
+var dir_var = img.reduceNeighborhood(ee.Reducer.variance(), rect_kernel).updateMask(directions.eq(1));
+
+dir_mean = dir_mean.addBands(img.reduceNeighborhood(ee.Reducer.mean(), diag_kernel).updateMask(directions.eq(2)));
+dir_var = dir_var.addBands(img.reduceNeighborhood(ee.Reducer.variance(), diag_kernel).updateMask(directions.eq(2)));
+
+//   // and add the bands for rotated kernels
+for (var i=1; i<4; i++) {
+dir_mean = dir_mean.addBands(img.reduceNeighborhood(ee.Reducer.mean(), rect_kernel.rotate(i)).updateMask(directions.eq(2*i+1)));
+dir_var = dir_var.addBands(img.reduceNeighborhood(ee.Reducer.variance(), rect_kernel.rotate(i)).updateMask(directions.eq(2*i+1)));
+dir_mean = dir_mean.addBands(img.reduceNeighborhood(ee.Reducer.mean(), diag_kernel.rotate(i)).updateMask(directions.eq(2*i+2)));
+dir_var = dir_var.addBands(img.reduceNeighborhood(ee.Reducer.variance(), diag_kernel.rotate(i)).updateMask(directions.eq(2*i+2)));
+ }
+
+//   // "collapse" the stack into a single band image (due to masking, each pixel has just one value in it's directional band, and is otherwise masked)
+dir_mean = dir_mean.reduce(ee.Reducer.sum());
+dir_var = dir_var.reduce(ee.Reducer.sum());
+
+//   // A finally generate the filtered value
+var varX = dir_var.subtract(dir_mean.multiply(dir_mean).multiply(sigmaV)).divide(sigmaV.add(1.0));
+
+var b = varX.divide(dir_var);
+
+var result = dir_mean.add(b.multiply(img.subtract(dir_mean)));
+return(result.arrayFlatten([['sum']]));
+}
+
+
+
+
+
+
+
+// DROUGHT MAPPING
+var modis = ee.ImageCollection('MODIS/061/MOD13Q1');
+
+var startYear = 2010
+var endYear = 2020
+var startDate = ee.Date.fromYMD(startYear, 1, 1)
+var endDate = ee.Date.fromYMD(endYear, 12, 31)
+var filtered = modis
+  .filter(ee.Filter.date(startDate, endDate))
+  
+
+// Cloud Masking
+var bitwiseExtract = function(input, fromBit, toBit) {
+  var maskSize = ee.Number(1).add(toBit).subtract(fromBit)
+  var mask = ee.Number(1).leftShift(maskSize).subtract(1)
+  return input.rightShift(fromBit).bitwiseAnd(mask)
+}
+
+var maskSnowAndClouds = function(image) {
+  var summaryQa = image.select('SummaryQA')
+  // Select pixels which are less than or equals to 1 (0 or 1)
+  var qaMask = bitwiseExtract(summaryQa, 0, 1).lte(1)
+  var maskedImage = image.updateMask(qaMask)
+  return maskedImage.copyProperties(image, ['system:index', 'system:time_start'])
+}
+
+// Apply the function to all images in the collection
+var maskedCol = filtered.map(maskSnowAndClouds)
+
+var ndviCol = maskedCol.select('NDVI')
+// MODIS NDVI values come as NDVI x 10000 that need to be scaled by 0.0001
+var scaleNdvi = function(image) {
+  var scaled = image.divide(10000)
+  return scaled.copyProperties(image, ['system:index', 'system:time_start'])
+};
+
+var ndviScaled = ndviCol.map(scaleNdvi)
+Map.addLayer(ndviScaled, visParams, 'NDVI Scaled', false)
+
+// Create NDVI composite for every month
+var years = ee.List.sequence(startYear,endYear);
+var months = ee.List.sequence(1, 12);
+
+// Map over the years and create a monthly average collection
+var monthlyImages = years.map(function(year) {
+  return months.map(function(month) {
+    var filtered = ndviScaled
+      .filter(ee.Filter.calendarRange(year, year, 'year'))
+      .filter(ee.Filter.calendarRange(month, month, 'month'))
+    var monthly = filtered.mean()
+    return monthly.set({'month': month, 'year': year})
+  })
+}).flatten()
+
+// We now have 1 image per month for entire duratioon
+var monthlyCol = ee.ImageCollection.fromImages(monthlyImages)
+
+
+// We can compute Minimum NDVI for each month across all years
+// i.e. Minimum NDVI for all May months in the collection
+var monthlyMinImages = months.map(function(month) {
+    var filtered = monthlyCol.filter(ee.Filter.eq('month', month))
+    var monthlyMin = filtered.min()
+    return monthlyMin.set('month', month)
+})
+var monthlyMin = ee.ImageCollection.fromImages(monthlyMinImages)
+var filter = monthlyMin.filter(ee.Filter.bounds(Greece))
+// We can compute Maximum NDVI for each month across all years
+// i.e. Maximum NDVI for all May months in the collection
+var monthlyMaxImages = months.map(function(month) {
+    var filtered = monthlyCol.filter(ee.Filter.eq('month', month))
+    var monthlyMax = filtered.max()
+    return monthlyMax.set('month', month)
+})
+var monthlyMax = ee.ImageCollection.fromImages(monthlyMaxImages)
+
+Map.addLayer(filter, visParams, 'ImageCollection', false)
+// Calculate VCI for 2020
+
+// We are interested in calculating VCI for a particular month
+var currentYear = 2020
+var currentMonth = 5
+
+var filtered = monthlyCol
+  .filter(ee.Filter.eq('year', currentYear))
+  .filter(ee.Filter.eq('month', currentMonth))
+var currentMonthNdvi = ee.Image(filtered.first())
+
+var minNdvi = ee.Image(monthlyMin.filter(ee.Filter.eq('month', currentMonth)).first())
+var maxNdvi = ee.Image(monthlyMax.filter(ee.Filter.eq('month', currentMonth)).first())
+
+var VCI = (minNdvi) / (maxNdvi)
+var image = ee.Image.cat([currentMonthNdvi, minNdvi, maxNdvi]).rename(['ndvi', 'min', 'max'])
+var vci = image.expression('100* (ndvi - min) / (max - min)',
+    {'ndvi': image.select('ndvi'),
+      'min': image.select('min'),
+      'max': image.select('max')
+    }).rename('vci')
+
+
+var visParams = {min: 0, max: 1, palette: ['white', 'green']}
+var vciPalette = ['#a50026','#d73027','#f46d43','#fdae61',
+  '#fee08b','#d9ef8b','#a6d96a','#66bd63','#1a9850','#006837'];
+var vciVisParams = {min: 0, max: 100, palette: vciPalette}
+Map.addLayer(minNdvi.clip(Greece), visParams, 'Minimum May NDVI', false)  
+Map.addLayer(maxNdvi.clip(Greece), visParams, 'Maximum May NDVI', false)
+Map.addLayer(currentMonthNdvi.clip(Greece), visParams, 'Current May NDVI', false)
+Export.image.toDrive({
+  image:currentMonthNdvi,
+  description:"CurrentMayNDVI",
+  folder: "RemoteSensingGreece",
+  scale:30,
+  region:geometry,
+  maxPixels: 1e13
+});
+Export.image.toDrive({
+  image:minNdvi,
+  description:"Minimum May NDVI",
+  folder: "RemoteSensingGreece",
+  scale:30,
+  region:geometry,
+  maxPixels: 1e13
+});
+Export.image.toDrive({
+  image:maxNdvi,
+  description:"Maximum May NDVI",
+  folder: "RemoteSensingGreece",
+  scale:30,
+  region:geometry,
+  maxPixels: 1e13
+});
+Map.centerObject(Greece,5)
+Map.addLayer(vci.clip(Greece), vciVisParams, 'VCI')
+Export.image.toDrive({
+  image:vci,
+  description:"PoorVCI",
+  folder: "RemoteSensingGreece",
+  scale:30,
+  region:geometry,
+  maxPixels: 1e13
+});
+
+
+
+
+
+
+
+
+
+
+ var hydrobasins = ee.FeatureCollection("WWF/HydroSHEDS/v1/Basins/hybas_7");
+ Map.addLayer(hydrobasins, {}, "PARAGUAY")
+
+
+
+
+
