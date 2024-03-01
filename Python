@@ -1,0 +1,87 @@
+import pandas as pd
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler
+import matplotlib.pyplot as plt
+
+# Assuming 'data' is your dataset
+# You might need to replace the file path or provide your data in a different way
+data = pd.read_csv("C:/Users/HP/Desktop/5TH YEAR/PROJECT/SPEI/SPEI-12.csv")
+# Standardize the data
+scaler = StandardScaler()
+scaled_data = scaler.fit_transform(data)
+
+# Perform PCA
+pca = PCA()
+pca_result = pca.fit_transform(scaled_data)
+# Create a DataFrame from the PCA values
+columns = [f"PC{i}" for i in range(1, pca.n_components_ + 1)]
+pca_df = pd.DataFrame(data=pca_result, columns=columns)
+
+# Display the DataFrame
+print(pca_df.head())
+# Print the first few rows of the DataFrame
+
+# Export DataFrame to CSV
+pca_df.to_csv("C:/Users/HP/Desktop/5TH YEAR/PROJECT/SPEI-12 PCA.csv", index=False)
+# Explained variance ratio
+explained_variance_ratio = pca.explained_variance_ratio_
+
+# Plot cumulative explained variance
+cumulative_explained_variance = explained_variance_ratio.cumsum()
+plt.plot(range(1, len(cumulative_explained_variance) + 1), cumulative_explained_variance, marker='o')
+plt.xlabel('Number of Principal Components')
+plt.ylabel('Cumulative Explained Variance')
+plt.title('Cumulative Explained Variance vs. Number of PCs')
+plt.show()
+
+# Show the plot
+plt.show()
+# Add the grid number column to the PCA results DataFrame
+pca_df['GRID'] = data['GRID ']
+
+# Now, pca_df contains the PCA results for SPEI 1 and grid numbers
+print(pca_df.head())
+import pandas as pd
+import geopandas as gpd
+# Load your shapefile containing grid numbers (assuming gdf is your GeoDataFrame)
+# gdf should also contain a column with grid numbers
+gdf = gpd.read_file("C:/Users/HP/Desktop/5TH YEAR/PROJECT/PROJECT IMAGES AND DATA/Shapefiles/Turkana Grid boxes final.shp")
+
+# Merge the two DataFrames based on the 'GridNumber' column
+merged_data = pd.merge(gdf, pca_df, on='GRID')
+
+# Now, merged_data contains both spatial information and PCA results
+print(merged_data.head())
+# Assuming merged_gdf contains your GeoDataFrame with the PCs
+# Make sure merged_gdf has columns like 'PC1', 'PC2', 'PC3' for the principal components
+
+# Set up subplots
+fig, axs = plt.subplots(1, 3, figsize=(15, 5))  # 1 row, 3 columns
+
+# Plot each PC in a separate subplot
+merged_data.plot(column='PC1', cmap='YlOrBr', linewidth=0.8, ax=axs[0], edgecolor='0.8', legend=True)
+axs[0].set_title('PC1')
+
+merged_data.plot(column='PC2', cmap='YlOrBr', linewidth=0.8, ax=axs[1], edgecolor='0.8', legend=True)
+axs[1].set_title('PC2')
+
+merged_data.plot(column='PC3', cmap='YlOrBr', linewidth=0.8, ax=axs[2], edgecolor='0.8', legend=True)
+axs[2].set_title('PC3')
+
+# Remove x and y axes from all subplots
+for ax in axs:
+    ax.set_axis_off()
+
+# Set the title for the entire plot
+plt.suptitle('SPEI-12 PCA', fontsize=15, fontweight='bold')
+
+# Adjust layout to prevent overlap
+plt.tight_layout()
+
+# Show the plot
+plt.show()
+
+
+
+
+
